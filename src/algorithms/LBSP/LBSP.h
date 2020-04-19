@@ -62,6 +62,7 @@ namespace bgslibrary
           CV_DbgAssert(_x < oInputImg.cols - (int)LBSP::PATCH_SIZE / 2 && _y < oInputImg.rows - (int)LBSP::PATCH_SIZE / 2);
           const size_t _step_row = oInputImg.step.p[0];
           const uchar* const _data = oInputImg.data;
+		  printf("ARK::computeGrayscaleDescriptor\n");
       #include "LBSP_16bits_dbcross_1ch.i"
         }
 
@@ -74,6 +75,33 @@ namespace bgslibrary
           CV_DbgAssert(_x < oInputImg.cols - (int)LBSP::PATCH_SIZE / 2 && _y < oInputImg.rows - (int)LBSP::PATCH_SIZE / 2);
           const size_t _step_row = oInputImg.step.p[0];
           const uchar* const _data = oInputImg.data;
+#if 0
+		  // ARK_DBG
+		  if (_x == 30 && _y == 30)
+		  {
+			  printf("ARK::computeRGBDescriptor: PATCH_SIZE %d, _step_row %d\n", PATCH_SIZE, _step_row);
+			  printf("_t (%d, %d, %d; _ref (%d, %d, %d);\n", _t[0], _t[1], _t[2], _ref[0], _ref[1], _ref[2]);
+
+			  for (int nn = 0; nn < 3; ++nn)
+			  {
+				  printf("Input: %d, %d, %d\n", _data[_step_row*(_y + 2) + 3 * (_x - 2)+nn], _data[_step_row*(_y + 2) + 3 * (_x + 0)+nn], _data[_step_row*(_y + 2) + 3 * (_x + 2)+nn]);
+				  printf("Input: %d, %d, %d\n", _data[_step_row*(_y + 1) + 3 * (_x - 1)+nn], _data[_step_row*(_y + 1) + 3 * (_x + 0)+nn], _data[_step_row*(_y + 1) + 3 * (_x + 1)+nn]);
+				  printf("Input: %d, %d, %d, %d\n", _data[_step_row*(_y + 0) + 3 * (_x - 2)+nn], _data[_step_row*(_y + 0) + 3 * (_x - 1)+nn], _data[_step_row*(_y + 0) + 3 * (_x + 1)+nn], _data[_step_row*(_y + 0) + 3 * (_x + 2)+nn]);
+				  printf("Input: %d, %d, %d\n", _data[_step_row*(_y - 1) + 3 * (_x - 1)+nn], _data[_step_row*(_y - 1) + 3 * (_x + 0)+nn], _data[_step_row*(_y - 1) + 3 * (_x + 1)+nn]);
+				  printf("Input: %d, %d, %d\n", _data[_step_row*(_y - 2) + 3 * (_x - 2)+nn], _data[_step_row*(_y - 2) + 3 * (_x + 0)+nn], _data[_step_row*(_y - 2) + 3 * (_x + 2)+nn]);
+
+				  for (int ii = -2; ii < 3; ii++)
+				  {
+					  for (int jj = -2; jj < 3; jj++)
+					  {
+						  printf("%d\t", _data[_step_row*(_y + ii) + 3 * (_x + jj) + nn]);
+					  }
+					  printf("\n");
+				  }
+				  printf("\n");
+			  }
+		  }
+#endif
       #include "LBSP_16bits_dbcross_3ch3t.i"
         }
 
@@ -86,6 +114,7 @@ namespace bgslibrary
           CV_DbgAssert(_x < oInputImg.cols - (int)LBSP::PATCH_SIZE / 2 && _y < oInputImg.rows - (int)LBSP::PATCH_SIZE / 2);
           const size_t _step_row = oInputImg.step.p[0];
           const uchar* const _data = oInputImg.data;
+		  printf("ARK::computeRGBDescriptor- PATCH_SIZE %d\n", (int)LBSP::PATCH_SIZE);
       #include "LBSP_16bits_dbcross_3ch1t.i"
         }
 
@@ -98,6 +127,14 @@ namespace bgslibrary
           CV_DbgAssert(_x < oInputImg.cols - (int)LBSP::PATCH_SIZE / 2 && _y < oInputImg.rows - (int)LBSP::PATCH_SIZE / 2);
           const size_t _step_row = oInputImg.step.p[0];
           const uchar* const _data = oInputImg.data;
+#if 0
+		  // ARK_DBG
+		  if (_x == 30 && _y == 30)
+		  {
+			   printf("ARK::computeSingleRGBDescriptor: PATCH_SIZE %d\n", PATCH_SIZE);
+			   printf("SingleRGB (%d): _t %d; _ref %d\n", _c, _t, _ref);
+		  }
+#endif
       #include "LBSP_16bits_dbcross_s3ch.i"
         }
 

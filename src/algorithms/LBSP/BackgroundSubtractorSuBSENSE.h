@@ -115,7 +115,14 @@ namespace bgslibrary
         cv::Mat m_oLastFGMask_dilated_inverted;
         cv::Mat m_oCurrRawFGBlinkMask;
         cv::Mat m_oLastRawFGBlinkMask;
-      };
+
+		// ARK_DBG
+		FILE *fSubsenseLog;
+		int  m_rkDbgStartX, m_rkDbgStartY;
+		int  m_rkDbgEndX, m_rkDbgEndY;
+		size_t m_rkDbgStepRow;
+		int m_rkDbgFrameCount;
+	  };
     }
   }
 }

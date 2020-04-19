@@ -9,6 +9,8 @@ import cv2
 import pybgs as bgs
 import sys
 import glob
+import matplotlib.pyplot as plt
+#import mpldatacursor
 
 print("OpenCV Version: {}".format(cv2.__version__))
 
@@ -26,65 +28,69 @@ def check_opencv_version(major):
 
 ## bgslibrary algorithms
 algorithms=[]
-algorithms.append(bgs.FrameDifference())
-algorithms.append(bgs.StaticFrameDifference())
-algorithms.append(bgs.WeightedMovingMean())
-algorithms.append(bgs.WeightedMovingVariance())
-algorithms.append(bgs.AdaptiveBackgroundLearning())
-algorithms.append(bgs.AdaptiveSelectiveBackgroundLearning())
-algorithms.append(bgs.MixtureOfGaussianV2())
-if is_cv2():
-  algorithms.append(bgs.MixtureOfGaussianV1()) # if opencv 2.x
-  algorithms.append(bgs.GMG()) # if opencv 2.x
-if is_cv3():
-  algorithms.append(bgs.KNN()) # if opencv 3.x
-if is_cv2() or is_cv3():
-  algorithms.append(bgs.DPAdaptiveMedian())
-  algorithms.append(bgs.DPGrimsonGMM())
-  algorithms.append(bgs.DPZivkovicAGMM())
-  algorithms.append(bgs.DPMean())
-  algorithms.append(bgs.DPWrenGA())
-  algorithms.append(bgs.DPPratiMediod())
-  algorithms.append(bgs.DPEigenbackground())
-  algorithms.append(bgs.DPTexture())
-  algorithms.append(bgs.T2FGMM_UM())
-  algorithms.append(bgs.T2FGMM_UV())
-  algorithms.append(bgs.T2FMRF_UM())
-  algorithms.append(bgs.T2FMRF_UV())
-  algorithms.append(bgs.FuzzySugenoIntegral())
-  algorithms.append(bgs.FuzzyChoquetIntegral())
-  algorithms.append(bgs.LBSimpleGaussian())
-  algorithms.append(bgs.LBFuzzyGaussian())
-  algorithms.append(bgs.LBMixtureOfGaussians())
-  algorithms.append(bgs.LBAdaptiveSOM())
-  algorithms.append(bgs.LBFuzzyAdaptiveSOM())
-  algorithms.append(bgs.LBP_MRF())
-  algorithms.append(bgs.MultiLayer())
-  algorithms.append(bgs.PixelBasedAdaptiveSegmenter())
-  algorithms.append(bgs.VuMeter())
-  algorithms.append(bgs.KDE())
-  algorithms.append(bgs.IndependentMultimodal())
-  algorithms.append(bgs.MultiCue())
-algorithms.append(bgs.SigmaDelta())
+
+#algorithms.append(bgs.FrameDifference())
+#algorithms.append(bgs.StaticFrameDifference())
+#algorithms.append(bgs.WeightedMovingMean())
+#algorithms.append(bgs.WeightedMovingVariance())
+#algorithms.append(bgs.AdaptiveBackgroundLearning())
+#algorithms.append(bgs.AdaptiveSelectiveBackgroundLearning())
+#algorithms.append(bgs.MixtureOfGaussianV2())
+#if is_cv2():
+#  algorithms.append(bgs.MixtureOfGaussianV1()) # if opencv 2.x
+#  algorithms.append(bgs.GMG()) # if opencv 2.x
+#if is_cv3():
+#  algorithms.append(bgs.KNN()) # if opencv 3.x
+#if is_cv2() or is_cv3():
+#  algorithms.append(bgs.DPAdaptiveMedian())
+#  algorithms.append(bgs.DPGrimsonGMM())
+#  algorithms.append(bgs.DPZivkovicAGMM())
+#  algorithms.append(bgs.DPMean())
+#  algorithms.append(bgs.DPWrenGA())
+#  algorithms.append(bgs.DPPratiMediod())
+#  algorithms.append(bgs.DPEigenbackground())
+#  algorithms.append(bgs.DPTexture())
+#  algorithms.append(bgs.T2FGMM_UM())
+#  algorithms.append(bgs.T2FGMM_UV())
+#  algorithms.append(bgs.T2FMRF_UM())
+#  algorithms.append(bgs.T2FMRF_UV())
+#  algorithms.append(bgs.FuzzySugenoIntegral())
+#  algorithms.append(bgs.FuzzyChoquetIntegral())
+#  algorithms.append(bgs.LBSimpleGaussian())
+#  algorithms.append(bgs.LBFuzzyGaussian())
+#  algorithms.append(bgs.LBMixtureOfGaussians())
+#  algorithms.append(bgs.LBAdaptiveSOM())
+#  algorithms.append(bgs.LBFuzzyAdaptiveSOM())
+#  algorithms.append(bgs.LBP_MRF())
+#  algorithms.append(bgs.MultiLayer())
+#  algorithms.append(bgs.PixelBasedAdaptiveSegmenter())
+#  algorithms.append(bgs.VuMeter())
+#  algorithms.append(bgs.KDE())
+#  algorithms.append(bgs.IndependentMultimodal())
+#  algorithms.append(bgs.MultiCue())
+#algorithms.append(bgs.SigmaDelta())
+#algorithms.append(bgs.SuBSENSE())
+#algorithms.append(bgs.LOBSTER())
+#algorithms.append(bgs.PAWCS())
+#algorithms.append(bgs.TwoPoints())
+#algorithms.append(bgs.ViBe())
+#algorithms.append(bgs.CodeBook())
+
 algorithms.append(bgs.SuBSENSE())
-algorithms.append(bgs.LOBSTER())
-algorithms.append(bgs.PAWCS())
-algorithms.append(bgs.TwoPoints())
-algorithms.append(bgs.ViBe())
-algorithms.append(bgs.CodeBook())
-
-
 # check if we want to use the images
 image = False
-if (len(sys.argv) == 2):
+if (len(sys.argv) >= 2):
     if(sys.argv[1] == "image"):
         image = True
-        img_folder = "dataset/frames"
+        if(sys.argv[2] == "full"):
+            img_folder = "dataset/fmoFrames"
+        else:
+            img_folder = "dataset/ballRoiPics"
         img_array = sorted(glob.iglob(img_folder + '/*.png'))
 
 video_file = "dataset/video.avi"
 
-
+frmId = 1
 for algorithm in algorithms:
   print("Running ", algorithm.__class__)
 
@@ -97,13 +103,35 @@ for algorithm in algorithms:
 
         # read file into open cv and apply to algorithm to generate background model
         img = cv2.imread(img_path)
+        #ballImg = img[240:420, 1460:1640]
+        #cv2.imwrite('BallRoiImg{}.png'.format(frmId), ballImg)
+        frmId += 1
         img_output = algorithm.apply(img)
         img_bgmodel = algorithm.getBackgroundModel()
 
+        # Full Image ROI => 240:420, 1548:1564
+        # ROI Imag roi => :, 88:104
+        # ballImg = img[240:420, 1548:1564]
+        #fig, ax = plt.subplots()
+        #ax.imshow(ballImg, interpolation='none')
+        #mpldatacursor.datacursor(hover=True, bbox=dict(alpha=1, fc='w'))
+        #plt.show()
+        
         # show images in python imshow window
-        cv2.imshow('image', img)
-        cv2.imshow('img_output', img_output)
-        cv2.imshow('img_bgmodel', img_bgmodel)
+        if(sys.argv[2] == "full"):
+            print("Full Show/write")
+            #cv2.imshow('image', img)
+            #cv2.imwrite('dataset/Outputs/FullFrameOutputs/FullOutImg00{}.png'.format(frmId), img_output)
+            #cv2.imwrite('dataset/Outputs/FullFrameOutputs/FullBgmImg00{}.png'.format(frmId), img_bgmodel)
+            #cv2.imshow('img_output', img_output)
+            #cv2.imshow('img_bgmodel', img_bgmodel)
+        else:
+            print("ROI show/write")
+            #cv2.imshow('image', img)
+            #cv2.imwrite('dataset/Outputs/RoiOutImg00{}.png'.format(frmId), img_output)
+            #cv2.imwrite('dataset/Outputs/RoiBgmImg00{}.png'.format(frmId), img_bgmodel)
+            #cv2.imshow('img_output', img_output)
+            #cv2.imshow('img_bgmodel', img_bgmodel)
 
         # we need waitKey otherwise it wont display the image
         if 0xFF & cv2.waitKey(10) == 27:
@@ -116,6 +144,7 @@ for algorithm in algorithms:
         #cv2.imwrite(img_fg, img_output)
 
         print("Frames left: " + str(len(img_array)-x))
+        #input("Press Enter ..")
 
   else:
 

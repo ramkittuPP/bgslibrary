@@ -70,6 +70,7 @@ namespace bgslibrary
         const uchar* _data = oInputImg.data;
         const uchar* _refdata = oRefImg.empty() ? oInputImg.data : oRefImg.data;
         const size_t nKeyPoints = voKeyPoints.size();
+		printf("LBSP__computeImpl: nChannels %d\n", nChannels);
         if (nChannels == 1) {
           oDesc.create((int)nKeyPoints, 1, CV_16UC1);
           for (size_t k = 0; k < nKeyPoints; ++k) {
@@ -107,6 +108,7 @@ namespace bgslibrary
         const uchar* _data = oInputImg.data;
         const uchar* _refdata = oRefImg.empty() ? oInputImg.data : oRefImg.data;
         const size_t nKeyPoints = voKeyPoints.size();
+		printf("LBSP__computeImplOverload: nChannels %d\n", nChannels);
         if (nChannels == 1) {
           oDesc.create((int)nKeyPoints, 1, CV_16UC1);
           for (size_t k = 0; k < nKeyPoints; ++k) {
@@ -144,6 +146,7 @@ namespace bgslibrary
         const uchar* _data = oInputImg.data;
         const uchar* _refdata = oRefImg.empty() ? oInputImg.data : oRefImg.data;
         const size_t nKeyPoints = voKeyPoints.size();
+		printf("LBSP__computeImpl2: nChannels %d\n", nChannels);
         if (nChannels == 1) {
           oDesc.create(oInputImg.size(), CV_16UC1);
           for (size_t k = 0; k < nKeyPoints; ++k) {
@@ -181,6 +184,7 @@ namespace bgslibrary
         const uchar* _data = oInputImg.data;
         const uchar* _refdata = oRefImg.empty() ? oInputImg.data : oRefImg.data;
         const size_t nKeyPoints = voKeyPoints.size();
+		printf("LBSP__computeImpl2Overload: nChannels %d\n", nChannels);
         if (nChannels == 1) {
           oDesc.create(oInputImg.size(), CV_16UC1);
           for (size_t k = 0; k < nKeyPoints; ++k) {
@@ -213,6 +217,7 @@ namespace bgslibrary
           oDescriptors.release();
           return;
         }
+		printf("LBSP__compute2: m_bOnlyUsingAbsThreshold %d\n", m_bOnlyUsingAbsThreshold);
         if (m_bOnlyUsingAbsThreshold)
           LBSP__computeImpl2(oImage, m_oRefImage, voKeypoints, oDescriptors, m_nThreshold);
         else
@@ -222,6 +227,7 @@ namespace bgslibrary
       void LBSP_::compute2(const std::vector<cv::Mat>& voImageCollection, std::vector<std::vector<cv::KeyPoint> >& vvoPointCollection, std::vector<cv::Mat>& voDescCollection) const {
         CV_Assert(voImageCollection.size() == vvoPointCollection.size());
         voDescCollection.resize(voImageCollection.size());
+		printf("LBSP__compute2Overload: ImgColSize %d\n", voImageCollection.size());
         for (size_t i = 0; i < voImageCollection.size(); i++)
           compute2(voImageCollection[i], vvoPointCollection[i], voDescCollection[i]);
       }
@@ -234,6 +240,7 @@ namespace bgslibrary
           oDescriptors.release();
           return;
         }
+		printf("LBSP_:computeImpl: m_bOnlyUsingAbsThreshold %d\n", m_bOnlyUsingAbsThreshold);
         if (m_bOnlyUsingAbsThreshold)
           LBSP__computeImpl(oImage, m_oRefImage, voKeypoints, oDescriptors, m_nThreshold);
         else
@@ -248,6 +255,7 @@ namespace bgslibrary
         CV_DbgAssert(oDescriptors.type() == CV_16UC1 || oDescriptors.type() == CV_16UC3);
         const size_t nChannels = (size_t)oDescriptors.channels();
         const size_t nKeyPoints = voKeypoints.size();
+		printf("LBSP_:reshapeDesc: nChannels %d\n", nChannels);
         if (nChannels == 1) {
           oOutput.create(oSize, CV_16UC1);
           oOutput = cv::Scalar_<ushort>(0);
@@ -277,6 +285,7 @@ namespace bgslibrary
         const float fScaleFactor = (float)UCHAR_MAX / (DESC_SIZE * 8);
         const size_t nChannels = CV_MAT_CN(oDesc1.type());
         const size_t _step_row = oDesc1.step.p[0];
+		printf("LBSP_:calcDescImgDiff: nChannels %d\n", nChannels);
         if (nChannels == 1) {
           oOutput.create(oDesc1.size(), CV_8UC1);
           oOutput = cv::Scalar(0);
@@ -322,6 +331,7 @@ namespace bgslibrary
         const size_t nBorderSize = PATCH_SIZE / 2;
         const cv::Rect nROI_inner(nBorderSize, nBorderSize, oROI.cols - nBorderSize * 2, oROI.rows - nBorderSize * 2);
         cv::Mat(oROI, nROI_inner).copyTo(cv::Mat(oROI_new, nROI_inner));
+		printf("LBSP_:validateKeyPoints: nBorderSize %d\n", nBorderSize);
         oROI = oROI_new;
       }
     }

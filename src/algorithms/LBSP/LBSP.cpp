@@ -20,6 +20,7 @@ namespace bgslibrary
         , m_nThreshold(nThresholdOffset)
         , m_oRefImage() {
         CV_Assert(m_fRelThreshold >= 0);
+		printf("LBSP Constructor with Args\n");
       }
 
       LBSP::~LBSP() {}
@@ -70,6 +71,7 @@ namespace bgslibrary
         const uchar* _data = oInputImg.data;
         const uchar* _refdata = oRefImg.empty() ? oInputImg.data : oRefImg.data;
         const size_t nKeyPoints = voKeyPoints.size();
+		printf("lbsp_computeImpl: nChannels %d\n", (int)nChannels);
         if (nChannels == 1) {
           oDesc.create((int)nKeyPoints, 1, CV_16UC1);
           for (size_t k = 0; k < nKeyPoints; ++k) {
@@ -107,6 +109,7 @@ namespace bgslibrary
         const uchar* _data = oInputImg.data;
         const uchar* _refdata = oRefImg.empty() ? oInputImg.data : oRefImg.data;
         const size_t nKeyPoints = voKeyPoints.size();
+		printf("lbsp_computeImplOverLoad: nChannels %d\n", (int)nChannels);
         if (nChannels == 1) {
           oDesc.create((int)nKeyPoints, 1, CV_16UC1);
           for (size_t k = 0; k < nKeyPoints; ++k) {
@@ -144,6 +147,7 @@ namespace bgslibrary
         const uchar* _data = oInputImg.data;
         const uchar* _refdata = oRefImg.empty() ? oInputImg.data : oRefImg.data;
         const size_t nKeyPoints = voKeyPoints.size();
+		printf("lbsp_computeImpl2: nChannels %d\n", (int)nChannels);
         if (nChannels == 1) {
           oDesc.create(oInputImg.size(), CV_16UC1);
           for (size_t k = 0; k < nKeyPoints; ++k) {
@@ -181,6 +185,7 @@ namespace bgslibrary
         const uchar* _data = oInputImg.data;
         const uchar* _refdata = oRefImg.empty() ? oInputImg.data : oRefImg.data;
         const size_t nKeyPoints = voKeyPoints.size();
+		printf("lbsp_computeImpl2Overload: nChannels %d\n", (int)nChannels);
         if (nChannels == 1) {
           oDesc.create(oInputImg.size(), CV_16UC1);
           for (size_t k = 0; k < nKeyPoints; ++k) {
@@ -213,6 +218,8 @@ namespace bgslibrary
           oDescriptors.release();
           return;
         }
+
+		printf("compute2: m_bOnlyUsingAbsThreshold %d\n", m_bOnlyUsingAbsThreshold);
         if (m_bOnlyUsingAbsThreshold)
           lbsp_computeImpl2(oImage, m_oRefImage, voKeypoints, oDescriptors, m_nThreshold);
         else
@@ -234,6 +241,7 @@ namespace bgslibrary
           oDescriptors.release();
           return;
         }
+		printf("compute2Overload: m_bOnlyUsingAbsThreshold %d\n", m_bOnlyUsingAbsThreshold);
         if (m_bOnlyUsingAbsThreshold)
           lbsp_computeImpl(oImage, m_oRefImage, voKeypoints, oDescriptors, m_nThreshold);
         else
@@ -248,6 +256,7 @@ namespace bgslibrary
         CV_DbgAssert(oDescriptors.type() == CV_16UC1 || oDescriptors.type() == CV_16UC3);
         const size_t nChannels = (size_t)oDescriptors.channels();
         const size_t nKeyPoints = voKeypoints.size();
+		printf("reshapeDesc: nChannels %d\n", (int)nChannels);
         if (nChannels == 1) {
           oOutput.create(oSize, CV_16UC1);
           oOutput = cv::Scalar_<ushort>(0);
@@ -277,6 +286,7 @@ namespace bgslibrary
         const float fScaleFactor = (float)UCHAR_MAX / (DESC_SIZE * 8);
         const size_t nChannels = CV_MAT_CN(oDesc1.type());
         const size_t _step_row = oDesc1.step.p[0];
+		printf("calcDescImgDiff: nChannels %d\n", (int)nChannels);
         if (nChannels == 1) {
           oOutput.create(oDesc1.size(), CV_8UC1);
           oOutput = cv::Scalar(0);
@@ -322,6 +332,7 @@ namespace bgslibrary
         const size_t nBorderSize = PATCH_SIZE / 2;
         const cv::Rect nROI_inner(nBorderSize, nBorderSize, oROI.cols - nBorderSize * 2, oROI.rows - nBorderSize * 2);
         cv::Mat(oROI, nROI_inner).copyTo(cv::Mat(oROI_new, nROI_inner));
+		printf("validateROI: nBorderSize %d\n", (int)nBorderSize);
         oROI = oROI_new;
       }
     }

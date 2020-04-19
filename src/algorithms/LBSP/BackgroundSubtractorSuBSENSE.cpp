@@ -81,6 +81,13 @@ namespace bgslibrary
         , m_bUse3x3Spread(true) {
         CV_Assert(m_nBGSamples > 0 && m_nRequiredBGSamples <= m_nBGSamples);
         CV_Assert(m_nMinColorDistThreshold >= STAB_COLOR_DIST_OFFSET);
+		fSubsenseLog = fopen("subsenseLog.txt", "w");
+		m_rkDbgStartX = 88; // 88; 1548
+		m_rkDbgEndX   = 104; // 104; 1564
+		m_rkDbgStartY = 2; // 0 (2); 240 (242)
+		m_rkDbgEndY   = 178; // 180 (178); 420 (417)
+		m_rkDbgStepRow = 540; // 540; 5760
+		m_rkDbgFrameCount = 0;
       }
 
       BackgroundSubtractorSuBSENSE::~BackgroundSubtractorSuBSENSE() {
@@ -88,6 +95,11 @@ namespace bgslibrary
           delete[] m_aPxIdxLUT;
         if (m_aPxInfoLUT)
           delete[] m_aPxInfoLUT;
+		if (fSubsenseLog)
+		{
+			printf("ARK::File Close\n");
+			fclose(fSubsenseLog);
+		}
       }
 
       void BackgroundSubtractorSuBSENSE::initialize(const cv::Mat& oInitImg, const cv::Mat& oROI) {
@@ -132,6 +144,7 @@ namespace bgslibrary
         m_nModelResetCooldown = 0;
         m_fLastNonZeroDescRatio = 0.0f;
         const int nTotImgPixels = m_oImgSize.height*m_oImgSize.width;
+		printf("Init counts: %d, %d, %d, %dx%d\n", nOrigROIPxCount, nFinalROIPxCount, m_nTotPxCount, m_oImgSize.width, m_oImgSize.height);
         if (nOrigROIPxCount >= m_nTotPxCount / 2 && (int)m_nTotPxCount >= DEFAULT_FRAME_SIZE.area()) {
           m_bLearningRateScalingEnabled = true;
           m_bAutoModelResetEnabled = true;
@@ -202,6 +215,7 @@ namespace bgslibrary
         m_oLastRawFGBlinkMask = cv::Scalar_<uchar>(0);
         m_voBGColorSamples.resize(m_nBGSamples);
         m_voBGDescSamples.resize(m_nBGSamples);
+		printf("Init (%dx%d): %d, %d, %d\n", m_oImgSize.width, m_oImgSize.height, m_nBGSamples, m_nMedianBlurKernelSize, m_bLearningRateScalingEnabled);
         for (size_t s = 0; s < m_nBGSamples; ++s) {
           m_voBGColorSamples[s].create(m_oImgSize, CV_8UC((int)m_nImgChannels));
           m_voBGColorSamples[s] = cv::Scalar_<uchar>::all(0);
@@ -219,6 +233,8 @@ namespace bgslibrary
           CV_Assert(m_oLastDescFrame.step.p[0] == m_oLastColorFrame.step.p[0] * 2 && m_oLastDescFrame.step.p[1] == m_oLastColorFrame.step.p[1] * 2);
           for (size_t t = 0; t <= UCHAR_MAX; ++t)
             m_anLBSPThreshold_8bitLUT[t] = cv::saturate_cast<uchar>((m_nLBSPThresholdOffset + t*m_fRelLBSPThreshold) / 3);
+
+		  printf("ARK::init:m_nTotPxCount %d, m_nTotRelevantPxCount %d\n", m_nTotPxCount, m_nTotRelevantPxCount);
           for (size_t nPxIter = 0, nModelIter = 0; nPxIter < m_nTotPxCount; ++nPxIter) {
             if (m_oROI.data[nPxIter]) {
               m_aPxIdxLUT[nModelIter] = nPxIter;
@@ -237,6 +253,9 @@ namespace bgslibrary
           CV_Assert(m_oLastDescFrame.step.p[0] == m_oLastColorFrame.step.p[0] * 2 && m_oLastDescFrame.step.p[1] == m_oLastColorFrame.step.p[1] * 2);
           for (size_t t = 0; t <= UCHAR_MAX; ++t)
             m_anLBSPThreshold_8bitLUT[t] = cv::saturate_cast<uchar>(m_nLBSPThresholdOffset + t*m_fRelLBSPThreshold);
+		  // ARK_DBG
+		  printf("ARK::init: (wxh => %dx%d) m_nTotPxCount %d, m_nTotRelevantPxCount %d\n", m_oImgSize.width, m_oImgSize.height, m_nTotPxCount, m_nTotRelevantPxCount);
+		  fprintf(fSubsenseLog, "init:m_nTotPxCount % d, m_nTotRelevantPxCount %d\n", m_nTotPxCount, m_nTotRelevantPxCount);
           for (size_t nPxIter = 0, nModelIter = 0; nPxIter < m_nTotPxCount; ++nPxIter) {
             if (m_oROI.data[nPxIter]) {
               m_aPxIdxLUT[nModelIter] = nPxIter;
@@ -248,11 +267,24 @@ namespace bgslibrary
               for (size_t c = 0; c < 3; ++c) {
                 m_oLastColorFrame.data[nPxRGBIter + c] = oInitImg.data[nPxRGBIter + c];
                 LBSP::computeSingleRGBDescriptor(oInitImg, oInitImg.data[nPxRGBIter + c], m_aPxInfoLUT[nPxIter].nImgCoord_X, m_aPxInfoLUT[nPxIter].nImgCoord_Y, c, m_anLBSPThreshold_8bitLUT[oInitImg.data[nPxRGBIter + c]], ((ushort*)(m_oLastDescFrame.data + nDescRGBIter))[c]);
+
+				//if ((m_aPxInfoLUT[nPxIter].nImgCoord_X >= m_rkDbgStartX) && (m_aPxInfoLUT[nPxIter].nImgCoord_X <= m_rkDbgEndX) &&
+				//	(m_aPxInfoLUT[nPxIter].nImgCoord_Y >= m_rkDbgStartY) && (m_aPxInfoLUT[nPxIter].nImgCoord_Y <= m_rkDbgEndY))
+				if ((m_aPxInfoLUT[nPxIter].nImgCoord_X == m_rkDbgStartX) && (m_aPxInfoLUT[nPxIter].nImgCoord_Y == m_rkDbgStartY))
+				{
+					//std::cout << std::endl;
+					fprintf(fSubsenseLog, "ARK::computeSingleRGBDescriptor x,y : (%d, %d); nPxIter %d \n", m_aPxInfoLUT[nPxIter].nImgCoord_X, m_aPxInfoLUT[nPxIter].nImgCoord_Y, nPxIter);
+					fprintf(fSubsenseLog, "c %d: anBGColor %d m_anLBSPThreshold_8bitLUT %d\n", c, oInitImg.data[nPxRGBIter + c], m_anLBSPThreshold_8bitLUT[oInitImg.data[nPxRGBIter + c]]);
+					fprintf(fSubsenseLog, "m_oLastColorFrame 0x%x\n", m_oLastColorFrame.data[nPxRGBIter + c]);
+					fprintf(fSubsenseLog, "ARK::Result 0x%x\n", ((ushort*)(m_oLastDescFrame.data + nDescRGBIter))[c]);
+				}
               }
               ++nModelIter;
             }
           }
         }
+		//ARK_DBG
+		fprintf(fSubsenseLog, "############# Initialized ##############\n");
         m_bInitialized = true;
         refreshModel(1.0f);
       }
@@ -281,6 +313,9 @@ namespace bgslibrary
           }
         }
         else { //m_nImgChannels==3
+			// ARK_DBG
+			fprintf(fSubsenseLog, "ARK::refreshModel: fSamplesRefreshFrac %f, bForceFGUpdate %d, nModelsToRefresh %d, nRefreshStartPos %d\n",
+				                       fSamplesRefreshFrac, bForceFGUpdate, nModelsToRefresh, nRefreshStartPos);
           for (size_t nModelIter = 0; nModelIter < m_nTotRelevantPxCount; ++nModelIter) {
             const size_t nPxIter = m_aPxIdxLUT[nModelIter];
             if (bForceFGUpdate || !m_oLastFGMask.data[nPxIter]) {
@@ -293,6 +328,16 @@ namespace bgslibrary
                   for (size_t c = 0; c < 3; ++c) {
                     m_voBGColorSamples[nCurrRealModelIdx].data[nPxIter * 3 + c] = m_oLastColorFrame.data[nSamplePxIdx * 3 + c];
                     *((ushort*)(m_voBGDescSamples[nCurrRealModelIdx].data + (nPxIter * 3 + c) * 2)) = *((ushort*)(m_oLastDescFrame.data + (nSamplePxIdx * 3 + c) * 2));
+					
+					//if ((nSampleImgCoord_X >= m_rkDbgStartX) && (nSampleImgCoord_X <= m_rkDbgEndX) &&
+					//	(nSampleImgCoord_Y >= m_rkDbgStartY) && (nSampleImgCoord_Y <= m_rkDbgEndY))
+					if ((nSampleImgCoord_X == m_rkDbgStartX) && (nSampleImgCoord_Y == m_rkDbgStartY))
+					{
+						//std::cout << std::endl;
+						fprintf(fSubsenseLog, "ARK::computeSingleRGBDescriptor x,y : (%d, %d) \n", nSampleImgCoord_X, nSampleImgCoord_Y);
+						fprintf(fSubsenseLog, "c %d: nPxIter %d m_voBGColorSamples %d\n", c, nPxIter, m_voBGColorSamples[nCurrRealModelIdx].data[nPxIter * 3 + c]);
+						fprintf(fSubsenseLog, "nCurrRealModelIdx %d m_voBGDescSamples 0x%x\n", nCurrRealModelIdx, *((ushort*)(m_voBGDescSamples[nCurrRealModelIdx].data + (nPxIter * 3 + c) * 2)));
+					}
                   }
                 }
               }
@@ -313,6 +358,7 @@ namespace bgslibrary
         size_t nNonZeroDescCount = 0;
         const float fRollAvgFactor_LT = 1.0f / std::min(++m_nFrameIndex, m_nSamplesForMovingAvgs);
         const float fRollAvgFactor_ST = 1.0f / std::min(m_nFrameIndex, m_nSamplesForMovingAvgs / 4);
+		fprintf(fSubsenseLog, "BackgroundSubtractorSuBSENSE:apply m_nImgChannels %d\n", (int)m_nImgChannels);
         if (m_nImgChannels == 1) {
           for (size_t nModelIter = 0; nModelIter < m_nTotRelevantPxCount; ++nModelIter) {
             const size_t nPxIter = m_aPxIdxLUT[nModelIter];
@@ -445,6 +491,8 @@ namespace bgslibrary
           }
         }
         else { //m_nImgChannels==3
+		// ARK_DBG
+		fprintf(fSubsenseLog, "apply:m_nTotRelevantPxCount %d\n", (int)m_nTotRelevantPxCount);
           for (size_t nModelIter = 0; nModelIter < m_nTotRelevantPxCount; ++nModelIter) {
             const size_t nPxIter = m_aPxIdxLUT[nModelIter];
             const int nCurrImgCoord_X = m_aPxInfoLUT[nPxIter].nImgCoord_X;
@@ -475,8 +523,53 @@ namespace bgslibrary
             ushort anCurrInterDesc[3], anCurrIntraDesc[3];
             const size_t anCurrIntraLBSPThresholds[3] = { m_anLBSPThreshold_8bitLUT[anCurrColor[0]],m_anLBSPThreshold_8bitLUT[anCurrColor[1]],m_anLBSPThreshold_8bitLUT[anCurrColor[2]] };
             LBSP::computeRGBDescriptor(oInputImg, anCurrColor, nCurrImgCoord_X, nCurrImgCoord_Y, anCurrIntraLBSPThresholds, anCurrIntraDesc);
-            m_oUnstableRegionMask.data[nPxIter] = ((*pfCurrDistThresholdFactor) > UNSTABLE_REG_RDIST_MIN || (*pfCurrMeanRawSegmRes_LT - *pfCurrMeanFinalSegmRes_LT) > UNSTABLE_REG_RATIO_MIN || (*pfCurrMeanRawSegmRes_ST - *pfCurrMeanFinalSegmRes_ST) > UNSTABLE_REG_RATIO_MIN) ? 1 : 0;
+            //ARK_DBG
+#if 1
+			if ((nCurrImgCoord_X == m_rkDbgStartX) && (nCurrImgCoord_Y == m_rkDbgStartY))
+			{
+				const size_t step_roi_row = m_rkDbgStepRow;
+				m_rkDbgFrameCount++;
+				fclose(fSubsenseLog);
+				char fileName[20]; // make sure it's big enough
+				snprintf(fileName, sizeof(fileName), "subsenseLog_%d.txt", m_rkDbgFrameCount);
+				fSubsenseLog = fopen(fileName, "w");
+				fprintf(fSubsenseLog, "----- InputData ----\n");
+				for (int nn = 0; nn < 3; ++nn)
+				{
+					for (int ii = -2; ii < 3; ii++)
+					{
+						for (int jj = -2; jj < 3; jj++)
+						{
+							fprintf(fSubsenseLog, "%d\t", oInputImg.data[step_roi_row*(m_rkDbgStartY + ii) + 3 * (m_rkDbgStartX + jj) + nn]);
+						}
+						fprintf(fSubsenseLog, "\n");
+					}
+					fprintf(fSubsenseLog, "\n");
+				}
+				fprintf(fSubsenseLog, "----------------------\n");
+			}
+
+			if ((nCurrImgCoord_X >= m_rkDbgStartX) && (nCurrImgCoord_X <= m_rkDbgEndX) &&
+				(nCurrImgCoord_Y >= m_rkDbgStartY) && (nCurrImgCoord_Y <= m_rkDbgEndY))
+			{
+				//std::cout << std::endl;
+				fprintf(fSubsenseLog, "--- x,y : (%d, %d) ------\n", nCurrImgCoord_X, nCurrImgCoord_Y);
+				fprintf(fSubsenseLog, "anCurrColor [%d,%d,%d]\n", anCurrColor[0], anCurrColor[1], anCurrColor[2]);
+				fprintf(fSubsenseLog, "anCurrIntraLBSPThresholds [%d,%d,%d]\n", anCurrIntraLBSPThresholds[0], anCurrIntraLBSPThresholds[1], anCurrIntraLBSPThresholds[2]);
+				fprintf(fSubsenseLog, "thresholds %d, %d, %d\n", anCurrIntraLBSPThresholds[0], anCurrIntraLBSPThresholds[1], anCurrIntraLBSPThresholds[2]);
+				fprintf(fSubsenseLog, "anCurrIntraDesc 0x%x, 0x%x, 0x%x\n", anCurrIntraDesc[0], anCurrIntraDesc[1], anCurrIntraDesc[2]);
+			}
+
+#endif
+			m_oUnstableRegionMask.data[nPxIter] = ((*pfCurrDistThresholdFactor) > UNSTABLE_REG_RDIST_MIN || (*pfCurrMeanRawSegmRes_LT - *pfCurrMeanFinalSegmRes_LT) > UNSTABLE_REG_RATIO_MIN || (*pfCurrMeanRawSegmRes_ST - *pfCurrMeanFinalSegmRes_ST) > UNSTABLE_REG_RATIO_MIN) ? 1 : 0;
             size_t nGoodSamplesCount = 0, nSampleIdx = 0;
+			if ((m_aPxInfoLUT[nPxIter].nImgCoord_X >= m_rkDbgStartX) && (m_aPxInfoLUT[nPxIter].nImgCoord_X <= m_rkDbgEndX) &&
+				(m_aPxInfoLUT[nPxIter].nImgCoord_Y >= m_rkDbgStartY) && (m_aPxInfoLUT[nPxIter].nImgCoord_Y <= m_rkDbgEndY))
+			{
+				fprintf(fSubsenseLog, "ARK::m_nRequiredBGSamples %d, m_nBGSamples %d\n", m_nRequiredBGSamples, m_nBGSamples);
+				fprintf(fSubsenseLog, "nPxIter %d, nDescIterRGB %d, nPxIterRGB %d\n", nPxIter, nDescIterRGB, nPxIterRGB);
+				fprintf(fSubsenseLog, "nCurrTotColorDistThreshold %d, nCurrTotDescDistThreshold %d\n", nCurrTotColorDistThreshold, nCurrTotDescDistThreshold);
+			}
             while (nGoodSamplesCount < m_nRequiredBGSamples && nSampleIdx < m_nBGSamples) {
               const ushort* const anBGIntraDesc = (ushort*)(m_voBGDescSamples[nSampleIdx].data + nDescIterRGB);
               const uchar* const anBGColor = m_voBGColorSamples[nSampleIdx].data + nPxIterRGB;
@@ -488,10 +581,23 @@ namespace bgslibrary
                   goto failedcheck3ch;
                 const size_t nIntraDescDist = hdist(anCurrIntraDesc[c], anBGIntraDesc[c]);
                 LBSP::computeSingleRGBDescriptor(oInputImg, anBGColor[c], nCurrImgCoord_X, nCurrImgCoord_Y, c, m_anLBSPThreshold_8bitLUT[anBGColor[c]], anCurrInterDesc[c]);
-                const size_t nInterDescDist = hdist(anCurrInterDesc[c], anBGIntraDesc[c]);
+
+				const size_t nInterDescDist = hdist(anCurrInterDesc[c], anBGIntraDesc[c]);
                 const size_t nDescDist = (nIntraDescDist + nInterDescDist) / 2;
                 const size_t nSumDist = std::min((nDescDist / 2)*(s_nColorMaxDataRange_1ch / s_nDescMaxDataRange_1ch) + nColorDist, s_nColorMaxDataRange_1ch);
-                if (nSumDist > nCurrSCColorDistThreshold)
+				
+				if ((nCurrImgCoord_X >= m_rkDbgStartX) && (nCurrImgCoord_X <= m_rkDbgEndX) &&
+					(nCurrImgCoord_Y >= m_rkDbgStartY) && (nCurrImgCoord_Y <= m_rkDbgEndY))
+				{
+					//std::cout << std::endl;
+					fprintf(fSubsenseLog, "ARK::computeSingleRGBDescriptor x,y : (%d, %d)\n", nCurrImgCoord_X, nCurrImgCoord_Y);
+					fprintf(fSubsenseLog, "ARK::SampleIdx %d m_voBGColorSamples[nSampleIdx].data %d \n", nSampleIdx, m_voBGColorSamples[nSampleIdx].data[nPxIter * 3 + c]);
+					fprintf(fSubsenseLog, "c %d: anBGColor %d m_anLBSPThreshold_8bitLUT %d\n", c, anBGColor[c], m_anLBSPThreshold_8bitLUT[anBGColor[c]]);
+					fprintf(fSubsenseLog, "anCurrIntraDesc 0x%x, anCurrInterDesc 0x%x, anBGIntraDesc 0x%x\n", anCurrIntraDesc[c], anCurrInterDesc[c], anBGIntraDesc[c]);
+					fprintf(fSubsenseLog, "ARK::nIntraDescDist 0x%x, nInterDescDist 0x%x, nDescDist 0x%x, nSumDist 0x%x\n", nIntraDescDist, nInterDescDist, nDescDist, nSumDist);
+				}
+
+				if (nSumDist > nCurrSCColorDistThreshold)
                   goto failedcheck3ch;
                 nTotDescDist += nDescDist;
                 nTotSumDist += nSumDist;
@@ -594,42 +700,45 @@ namespace bgslibrary
           }
         }
 #if DISPLAY_SUBSENSE_DEBUG_INFO
+		
         std::cout << std::endl;
         cv::Point dbgpt(nDebugCoordX, nDebugCoordY);
         cv::Mat oMeanMinDistFrameNormalized; m_oMeanMinDistFrame_ST.copyTo(oMeanMinDistFrameNormalized);
         cv::circle(oMeanMinDistFrameNormalized, dbgpt, 5, cv::Scalar(1.0f));
         cv::resize(oMeanMinDistFrameNormalized, oMeanMinDistFrameNormalized, DEFAULT_FRAME_SIZE);
-        cv::imshow("d_min(x)", oMeanMinDistFrameNormalized);
+        //cv::imshow("d_min(x)", oMeanMinDistFrameNormalized);
         std::cout << std::fixed << std::setprecision(5) << "  d_min(" << dbgpt << ") = " << m_oMeanMinDistFrame_ST.at<float>(dbgpt) << std::endl;
-        cv::Mat oMeanLastDistFrameNormalized; m_oMeanLastDistFrame.copyTo(oMeanLastDistFrameNormalized);
+		fprintf(fSubsenseLog, " d_min %f \n", m_oMeanMinDistFrame_ST);
+		cv::Mat oMeanLastDistFrameNormalized; m_oMeanLastDistFrame.copyTo(oMeanLastDistFrameNormalized);
         cv::circle(oMeanLastDistFrameNormalized, dbgpt, 5, cv::Scalar(1.0f));
         cv::resize(oMeanLastDistFrameNormalized, oMeanLastDistFrameNormalized, DEFAULT_FRAME_SIZE);
-        cv::imshow("d_last(x)", oMeanLastDistFrameNormalized);
+        //cv::imshow("d_last(x)", oMeanLastDistFrameNormalized);
         std::cout << std::fixed << std::setprecision(5) << " d_last(" << dbgpt << ") = " << m_oMeanLastDistFrame.at<float>(dbgpt) << std::endl;
-        cv::Mat oMeanRawSegmResFrameNormalized; m_oMeanRawSegmResFrame_ST.copyTo(oMeanRawSegmResFrameNormalized);
+		fprintf(fSubsenseLog, " d_last %f \n", dbgpt);
+		cv::Mat oMeanRawSegmResFrameNormalized; m_oMeanRawSegmResFrame_ST.copyTo(oMeanRawSegmResFrameNormalized);
         cv::circle(oMeanRawSegmResFrameNormalized, dbgpt, 5, cv::Scalar(1.0f));
         cv::resize(oMeanRawSegmResFrameNormalized, oMeanRawSegmResFrameNormalized, DEFAULT_FRAME_SIZE);
-        cv::imshow("s_avg(x)", oMeanRawSegmResFrameNormalized);
+        //cv::imshow("s_avg(x)", oMeanRawSegmResFrameNormalized);
         std::cout << std::fixed << std::setprecision(5) << "  s_avg(" << dbgpt << ") = " << m_oMeanRawSegmResFrame_ST.at<float>(dbgpt) << std::endl;
         cv::Mat oMeanFinalSegmResFrameNormalized; m_oMeanFinalSegmResFrame_ST.copyTo(oMeanFinalSegmResFrameNormalized);
         cv::circle(oMeanFinalSegmResFrameNormalized, dbgpt, 5, cv::Scalar(1.0f));
         cv::resize(oMeanFinalSegmResFrameNormalized, oMeanFinalSegmResFrameNormalized, DEFAULT_FRAME_SIZE);
-        cv::imshow("z_avg(x)", oMeanFinalSegmResFrameNormalized);
+        //cv::imshow("z_avg(x)", oMeanFinalSegmResFrameNormalized);
         std::cout << std::fixed << std::setprecision(5) << "  z_avg(" << dbgpt << ") = " << m_oMeanFinalSegmResFrame_ST.at<float>(dbgpt) << std::endl;
         cv::Mat oDistThresholdFrameNormalized; m_oDistThresholdFrame.convertTo(oDistThresholdFrameNormalized, CV_32FC1, 0.25f, -0.25f);
         cv::circle(oDistThresholdFrameNormalized, dbgpt, 5, cv::Scalar(1.0f));
         cv::resize(oDistThresholdFrameNormalized, oDistThresholdFrameNormalized, DEFAULT_FRAME_SIZE);
-        cv::imshow("r(x)", oDistThresholdFrameNormalized);
+        //cv::imshow("r(x)", oDistThresholdFrameNormalized);
         std::cout << std::fixed << std::setprecision(5) << "      r(" << dbgpt << ") = " << m_oDistThresholdFrame.at<float>(dbgpt) << std::endl;
         cv::Mat oVariationModulatorFrameNormalized; cv::normalize(m_oVariationModulatorFrame, oVariationModulatorFrameNormalized, 0, 255, cv::NORM_MINMAX, CV_8UC1);
         cv::circle(oVariationModulatorFrameNormalized, dbgpt, 5, cv::Scalar(255));
         cv::resize(oVariationModulatorFrameNormalized, oVariationModulatorFrameNormalized, DEFAULT_FRAME_SIZE);
-        cv::imshow("v(x)", oVariationModulatorFrameNormalized);
+        //cv::imshow("v(x)", oVariationModulatorFrameNormalized);
         std::cout << std::fixed << std::setprecision(5) << "      v(" << dbgpt << ") = " << m_oVariationModulatorFrame.at<float>(dbgpt) << std::endl;
         cv::Mat oUpdateRateFrameNormalized; m_oUpdateRateFrame.convertTo(oUpdateRateFrameNormalized, CV_32FC1, 1.0f / FEEDBACK_T_UPPER, -FEEDBACK_T_LOWER / FEEDBACK_T_UPPER);
         cv::circle(oUpdateRateFrameNormalized, dbgpt, 5, cv::Scalar(1.0f));
         cv::resize(oUpdateRateFrameNormalized, oUpdateRateFrameNormalized, DEFAULT_FRAME_SIZE);
-        cv::imshow("t(x)", oUpdateRateFrameNormalized);
+        //cv::imshow("t(x)", oUpdateRateFrameNormalized);
         std::cout << std::fixed << std::setprecision(5) << "      t(" << dbgpt << ") = " << m_oUpdateRateFrame.at<float>(dbgpt) << std::endl;
 #endif //DISPLAY_SUBSENSE_DEBUG_INFO
         cv::bitwise_xor(oCurrFGMask, m_oLastRawFGMask, m_oCurrRawFGBlinkMask);
@@ -732,6 +841,8 @@ namespace bgslibrary
         CV_Assert(LBSP::DESC_SIZE == 2);
         CV_Assert(m_bInitialized);
         cv::Mat oAvgBGDesc = cv::Mat::zeros(m_oImgSize, CV_32FC((int)m_nImgChannels));
+		printf("ARK::getBackgroundDescriptorsImage: w %d, h %d, BGSize %d\n", m_oImgSize.width, m_oImgSize.height,
+			m_voBGDescSamples.size());
         for (size_t n = 0; n < m_voBGDescSamples.size(); ++n) {
           for (int y = 0; y < m_oImgSize.height; ++y) {
             for (int x = 0; x < m_oImgSize.width; ++x) {
